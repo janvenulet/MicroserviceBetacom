@@ -4,13 +4,14 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.templ.freemarker.FreeMarkerTemplateEngine;
 
 public class MainVerticle extends AbstractVerticle
 {
-
+	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
 	
 	@Override
@@ -31,12 +32,12 @@ public class MainVerticle extends AbstractVerticle
 		
 		Router router = Router.router(vertx);
 		
-		router.get("/").handler(indexHandler()); //error possibility
+		router.get("/").handler(this::indexHandler); //error possibility
 		
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
 		server.requestHandler(router).listen(8092, asyncResult -> {
 		if (asyncResult.succeeded()) {
-			System.out.print("HTTP server running on port 8080");
+			System.out.print("HTTP server running on port 8092");
 			future.complete();
 		} else {
 			System.out.print("Could not start a HTTP server\n" + asyncResult.cause().toString());
@@ -46,13 +47,22 @@ public class MainVerticle extends AbstractVerticle
 		return future;
 	}
 
-	private Handler<RoutingContext> indexHandler() {
-		// TODO Auto-generated method stub
+	private Handler<RoutingContext> indexHandler(RoutingContext context) {
+		context.put("title", "Log in");
+		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
+			if (asyncResult.succeeded()) {
+				context.response().putHeader("Content-Type", "ttext/html");
+				
+				context.response().end(asyncResult.result());
+			} else {
+				context.fail(asyncResult.cause());
+			}
+		});
 		return null;
 	}
 
 	private Future<Void> setupDatabase() {
-		// TODO Auto-generated method stub
+		mongoClient = MongoClient.createShared(vertx, config()); //creates pool on the first call
 		return null;
 	}
 	
