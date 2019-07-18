@@ -4,6 +4,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
+import io.vertx.ext.mongo.MongoClient;
 //import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -11,7 +12,7 @@ import io.vertx.ext.web.templ.freemarker.FreeMarkerTemplateEngine;
 
 public class MainVerticle extends AbstractVerticle
 {
-	//private MongoClient mongoClient;
+	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
 	
 	@Override
@@ -33,7 +34,8 @@ public class MainVerticle extends AbstractVerticle
 		Router router = Router.router(vertx);
 		
 		router.get("/").handler(this::indexHandler); //error possibility
-		router.get("/signup").handler(this::registerHandler);
+		router.get("/signup").handler(this::signupHandler);
+		router.post("/register").handler(this::registerHandler);
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
 		server.requestHandler(router).listen(8092, asyncResult -> {
 		if (asyncResult.succeeded()) {
@@ -60,7 +62,7 @@ public class MainVerticle extends AbstractVerticle
 		return null;
 	}
 	
-	private Handler<RoutingContext> registerHandler(RoutingContext context) {
+	private Handler<RoutingContext> signupHandler(RoutingContext context) {
 		context.put("title", "Sign up");
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
@@ -73,6 +75,21 @@ public class MainVerticle extends AbstractVerticle
 		return null;
 	}
 
+	private Handler<RoutingContext> registerHandler(RoutingContext context) {
+		String username = context.request().getParam("username");
+		String password = context.request().getParam("password");
+		
+		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
+			if (asyncResult.succeeded()) {
+				context.response().putHeader("Content-Type", "text/html");
+				context.response().end(asyncResult.result());
+			} else {
+				context.fail(asyncResult.cause());
+			}
+		});
+		return null;
+	}
+	
 	private Future<Void> setupDatabase() {
 		//mongoClient = MongoClient.createShared(vertx, config()); //creates pool on the first call
 		Future<Void> future = Future.future();
