@@ -33,7 +33,7 @@ public class MainVerticle extends AbstractVerticle
 		Router router = Router.router(vertx);
 		
 		router.get("/").handler(this::indexHandler); //error possibility
-		
+		router.get("/signup").handler(this::registerHandler);
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
 		server.requestHandler(router).listen(8092, asyncResult -> {
 		if (asyncResult.succeeded()) {
@@ -49,6 +49,19 @@ public class MainVerticle extends AbstractVerticle
 
 	private Handler<RoutingContext> indexHandler(RoutingContext context) {
 		context.put("title", "Log in");
+		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
+			if (asyncResult.succeeded()) {
+				context.response().putHeader("Content-Type", "text/html");
+				context.response().end(asyncResult.result());
+			} else {
+				context.fail(asyncResult.cause());
+			}
+		});
+		return null;
+	}
+	
+	private Handler<RoutingContext> registerHandler(RoutingContext context) {
+		context.put("title", "Sign up");
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
 				context.response().putHeader("Content-Type", "text/html");
