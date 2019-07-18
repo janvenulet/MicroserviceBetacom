@@ -4,14 +4,14 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServer;
-import io.vertx.ext.mongo.MongoClient;
+//import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.templ.freemarker.FreeMarkerTemplateEngine;
 
 public class MainVerticle extends AbstractVerticle
 {
-	private MongoClient mongoClient;
+	//private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
 	
 	@Override
@@ -51,8 +51,7 @@ public class MainVerticle extends AbstractVerticle
 		context.put("title", "Log in");
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
-				context.response().putHeader("Content-Type", "ttext/html");
-				
+				context.response().putHeader("Content-Type", "text/html");
 				context.response().end(asyncResult.result());
 			} else {
 				context.fail(asyncResult.cause());
@@ -62,8 +61,10 @@ public class MainVerticle extends AbstractVerticle
 	}
 
 	private Future<Void> setupDatabase() {
-		mongoClient = MongoClient.createShared(vertx, config()); //creates pool on the first call
-		return null;
+		//mongoClient = MongoClient.createShared(vertx, config()); //creates pool on the first call
+		Future<Void> future = Future.future();
+		future.complete();
+		return future;
 	}
 	
 }
