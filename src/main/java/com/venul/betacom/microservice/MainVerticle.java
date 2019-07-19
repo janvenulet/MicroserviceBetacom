@@ -10,6 +10,7 @@ import io.vertx.ext.mongo.MongoClient;
 //import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.templ.freemarker.FreeMarkerTemplateEngine;
 
 public class MainVerticle extends AbstractVerticle
@@ -38,6 +39,7 @@ public class MainVerticle extends AbstractVerticle
 		
 		router.get("/").handler(this::indexHandler); //error possibility
 		router.get("/signup").handler(this::signupHandler);
+		router.post().handler(BodyHandler.create());
 		router.post("/register").handler(this::registerHandler);
 		router.post("/login").handler(this::loginHandler);
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
@@ -71,18 +73,33 @@ public class MainVerticle extends AbstractVerticle
 	
 	
 	private void loginHandler(RoutingContext context) {
-		String login = context.request().getParam("login");
-		String password = context.request().getParam("password");
-		System.out.println(login);
-		System.out.println(password);
-		if (false){
-			context.response().setStatusCode(200);
-		} else {
-			firstTry = false;
-			context.response().putHeader("Location", "/");
-			context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
-			context.response().end();
-		}
+		String login = context.request().getParam("loginId");
+		String password = context.request().getParam("passwordId");
+		JsonObject query = new JsonObject().put(("login"), login).put("password", password);
+		mongoClient.find("users", query, result -> {
+			if(result.succeeded()) {
+				if (result.result().isEmpty()) {
+					firstTry = false;context.response().putHeader("Location", "/");
+					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+					context.response().end();
+				} else {
+				    JsonObject json = result.result().get(0);
+					firstTry = true;
+					context.response().setStatusCode(200);
+					context.response().putHeader("Location", "/" + json.getString("login"));
+					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+					context.response().end();
+					return;
+				}
+
+			} else {
+//				firstTry = false;
+//				context.response().putHeader("Location", "/");
+//				context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+//				context.response().end();
+				result.cause().printStackTrace();
+			}
+		});
 	}
 
 	private void signupHandler(RoutingContext context) {

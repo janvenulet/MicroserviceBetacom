@@ -3,15 +3,15 @@
       <h1 class="display-4">${title}</h1>
         <#if title = "Log in">
         <div class="input-group">
-          <form class="form-group" action="/login" method="post" enctype="text/plain">
+          <form class="form-group" action="/login" method="post">
             <div class="form-group">
               <#if firstTry=="no"> <small class="form-text text-danger">Wrong login or password! Try again.</small> </#if> 
               <label for="usernameId">Username: </label>
-              <input type="text" class="form-control" id="usernameId" placeholder="Username" aria-label="Username" name="login">
+              <input type="text" class="form-control" id="loginId" placeholder="Username" name="loginId">
             </div>
             <div class="form-group">
               <label for="passwordId">Password: </label>
-              <input type="password" class="form-control" id="passwordId" placeholder="Password" aria-label="Password" name="password">
+              <input type="password" class="form-control" id="passwordId" placeholder="Password" aria-label="Password" name="passwordId">
             </div>
             <button type="submit" class="btn btn-primary">Log in</button>
           </form>
