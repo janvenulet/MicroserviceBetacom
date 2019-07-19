@@ -3,7 +3,9 @@ package com.venul.betacom.microservice;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 //import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
@@ -14,6 +16,7 @@ public class MainVerticle extends AbstractVerticle
 {
 	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
+	private boolean firstTry = true;
 	
 	@Override
 	public void start(Future<Void> startFuture) throws Exception {
@@ -36,6 +39,7 @@ public class MainVerticle extends AbstractVerticle
 		router.get("/").handler(this::indexHandler); //error possibility
 		router.get("/signup").handler(this::signupHandler);
 		router.post("/register").handler(this::registerHandler);
+		router.post("/login").handler(this::loginHandler);
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
 		server.requestHandler(router).listen(8092, asyncResult -> {
 		if (asyncResult.succeeded()) {
@@ -49,8 +53,12 @@ public class MainVerticle extends AbstractVerticle
 		return future;
 	}
 
-	private Handler<RoutingContext> indexHandler(RoutingContext context) {
+	private void indexHandler(RoutingContext context) {
 		context.put("title", "Log in");
+		if (firstTry) 
+			context.put("firstTry", "yes");
+		else 
+			context.put("firstTry", "no"); //sets "Wrong login or password! Try again" above input form
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
 				context.response().putHeader("Content-Type", "text/html");
@@ -59,10 +67,25 @@ public class MainVerticle extends AbstractVerticle
 				context.fail(asyncResult.cause());
 			}
 		});
-		return null;
 	}
 	
-	private Handler<RoutingContext> signupHandler(RoutingContext context) {
+	
+	private void loginHandler(RoutingContext context) {
+		String login = context.request().getParam("login");
+		String password = context.request().getParam("password");
+		System.out.println(login);
+		System.out.println(password);
+		if (false){
+			context.response().setStatusCode(200);
+		} else {
+			firstTry = false;
+			context.response().putHeader("Location", "/");
+			context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+			context.response().end();
+		}
+	}
+
+	private void signupHandler(RoutingContext context) {
 		context.put("title", "Sign up");
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
@@ -72,13 +95,12 @@ public class MainVerticle extends AbstractVerticle
 				context.fail(asyncResult.cause());
 			}
 		});
-		return null;
 	}
 
-	private Handler<RoutingContext> registerHandler(RoutingContext context) {
-		String username = context.request().getParam("username");
+	private void registerHandler(RoutingContext context) {
+		String login = context.request().getParam("login");
 		String password = context.request().getParam("password");
-		
+		JsonObject user = new JsonObject().put("login", login).put("password", password);
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
 				context.response().putHeader("Content-Type", "text/html");
@@ -87,11 +109,10 @@ public class MainVerticle extends AbstractVerticle
 				context.fail(asyncResult.cause());
 			}
 		});
-		return null;
 	}
 	
 	private Future<Void> setupDatabase() {
-		//mongoClient = MongoClient.createShared(vertx, config()); //creates pool on the first call
+		mongoClient = MongoClient.createShared(vertx, config()); //creates pool on the first call
 		Future<Void> future = Future.future();
 		future.complete();
 		return future;
