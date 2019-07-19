@@ -75,18 +75,20 @@ public class MainVerticle extends AbstractVerticle
 	private void loginHandler(RoutingContext context) {
 		String login = context.request().getParam("loginId");
 		String password = context.request().getParam("passwordId");
-		JsonObject query = new JsonObject().put(("login"), login).put("password", password);
+		JsonObject query = new JsonObject().put(("username"), login).put("password", password);
 		mongoClient.find("users", query, result -> {
 			if(result.succeeded()) {
 				if (result.result().isEmpty()) {
-					firstTry = false;context.response().putHeader("Location", "/");
+					firstTry = false;
+					context.response().putHeader("Location", "/");
 					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
 					context.response().end();
 				} else {
+					System.out.println("not empty!");
 				    JsonObject json = result.result().get(0);
 					firstTry = true;
 					context.response().setStatusCode(200);
-					context.response().putHeader("Location", "/" + json.getString("login"));
+					context.response().putHeader("Location", "/" + json.getString("username"));
 					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
 					context.response().end();
 					return;
@@ -129,7 +131,8 @@ public class MainVerticle extends AbstractVerticle
 	}
 	
 	private Future<Void> setupDatabase() {
-		mongoClient = MongoClient.createShared(vertx, config()); //creates pool on the first call
+		config().remove("db_name");
+		mongoClient = MongoClient.createShared(vertx, config().put("db_name","microservices")); //creates pool on the first call
 		Future<Void> future = Future.future();
 		future.complete();
 		return future;
