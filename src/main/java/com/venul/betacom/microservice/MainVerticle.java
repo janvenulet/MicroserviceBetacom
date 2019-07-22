@@ -17,7 +17,7 @@ public class MainVerticle extends AbstractVerticle
 {
 	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
-	private boolean firstTry = true;
+	private String errorMessage = "";
 	
 	@Override
 	public void start(Future<Void> startFuture) throws Exception {
@@ -57,10 +57,7 @@ public class MainVerticle extends AbstractVerticle
 
 	private void indexHandler(RoutingContext context) {
 		context.put("title", "Log in");
-		if (firstTry) 
-			context.put("firstTry", "yes");
-		else 
-			context.put("firstTry", "no"); //sets "Wrong login or password! Try again" above input form
+		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
 				context.response().putHeader("Content-Type", "text/html");
@@ -79,15 +76,14 @@ public class MainVerticle extends AbstractVerticle
 		mongoClient.find("users", query, result -> {
 			if(result.succeeded()) {
 				if (result.result().isEmpty()) {
-					firstTry = false;
+					errorMessage = "Wrong login or password! Please try again.";
 					context.response().putHeader("Location", "/");
 					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
 					context.response().end();
 				} else {
-					System.out.println("not empty!");
+					System.out.println("Singing in");
 				    JsonObject json = result.result().get(0);
-					firstTry = true;
-					context.response().setStatusCode(200);
+				    errorMessage = "";
 					context.response().putHeader("Location", "/" + json.getString("username"));
 					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
 					context.response().end();
@@ -95,10 +91,6 @@ public class MainVerticle extends AbstractVerticle
 				}
 
 			} else {
-//				firstTry = false;
-//				context.response().putHeader("Location", "/");
-//				context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
-//				context.response().end();
 				result.cause().printStackTrace();
 			}
 		});
@@ -106,6 +98,8 @@ public class MainVerticle extends AbstractVerticle
 
 	private void signupHandler(RoutingContext context) {
 		context.put("title", "Sign up");
+		if (errorMessage.equals("Wrong login or password! Please try again.")) errorMessage = "";
+		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
 		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
 			if (asyncResult.succeeded()) {
 				context.response().putHeader("Content-Type", "text/html");
@@ -117,16 +111,36 @@ public class MainVerticle extends AbstractVerticle
 	}
 
 	private void registerHandler(RoutingContext context) {
-		String login = context.request().getParam("login");
-		String password = context.request().getParam("password");
-		JsonObject user = new JsonObject().put("login", login).put("password", password);
-		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
-			if (asyncResult.succeeded()) {
-				context.response().putHeader("Content-Type", "text/html");
-				context.response().end(asyncResult.result());
+		String login = context.request().getParam("loginId");
+		String password = context.request().getParam("passwordId");
+		JsonObject query = new JsonObject().put("username", login);
+		System.out.println(query.toString());
+		mongoClient.find("users", query, result -> {
+			if(result.succeeded()) {
+				errorMessage = "";
+				if (result.result().isEmpty()) {
+					query.put("password", password);
+					System.out.println(query.toString());
+					mongoClient.save("users", query, res -> {
+						if(res.succeeded()) {
+							System.out.println("Saved user");
+							context.response().putHeader("Location", "/" + login);
+							context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+							context.response().end();
+						} else {
+							res.cause().printStackTrace();
+						}
+					});
+				} else {
+					errorMessage = "Account with given username already exist! Please try again. ";
+					context.response().putHeader("Location", "/signup");
+					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+					context.response().end();
+				}
 			} else {
-				context.fail(asyncResult.cause());
+				result.cause().printStackTrace();
 			}
+			
 		});
 	}
 	

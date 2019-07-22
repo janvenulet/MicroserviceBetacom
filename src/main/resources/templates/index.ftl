@@ -5,7 +5,7 @@
         <div class="input-group">
           <form class="form-group" action="/login" method="post">
             <div class="form-group">
-              <#if firstTry=="no"> <small class="form-text text-danger">Wrong login or password! Try again.</small> </#if> 
+              <small class="form-text text-danger">${errorMessage}</small>
               <label for="usernameId">Username: </label>
               <input type="text" class="form-control" id="loginId" placeholder="Username" name="loginId">
             </div>
@@ -22,18 +22,24 @@
       </#if>
       <#if title = "Sign up">
         <div class="input-group">
-          <form class="form-group" action="/register" method="post" enctype="text/plain">
+          <form class="form-group" action="/register" method="post">
             <div class="form-group">
+            <small class="form-text text-danger">${errorMessage}</small>
               <label for="usernameId">Username: </label>
-              <input type="text" class="form-control" id="usernameId" placeholder="Username" aria-label="Username" name="login" required>
+              <input type="text" minlength="5" class="form-control" id="loginId" placeholder="Username" aria-label="Username" name="loginId" required>
             </div>
             <div class="form-group">
               <label for="passwordId">Password: </label>
-              <input type="password" minlength="5" class="form-control" id="passwordId" placeholder="Password" aria-label="Password" name="password" required>
+              <input type="password" minlength="5" class="form-control" id="passwordId" placeholder="Password" aria-label="Password" name="passwordId" required>
               <small class="form-text text-muted">Password needs to be at least 5 characters.</small>	
             </div>
             <button type="submit" class="btn btn-primary">Sign up</button>
           </form>
         </div>
+       	<form action="/" method="get">
+        	<button type="submit" class="btn btn-primary" id="register-btn">
+        	<span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span>Go back
+        	</button>
+      	</form>
       </#if>
 <#include "footer.ftl">
