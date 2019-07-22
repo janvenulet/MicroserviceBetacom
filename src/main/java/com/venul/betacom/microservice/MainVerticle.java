@@ -42,6 +42,7 @@ public class MainVerticle extends AbstractVerticle
 		router.post().handler(BodyHandler.create());
 		router.post("/register").handler(this::registerHandler);
 		router.post("/login").handler(this::loginHandler);
+		router.get("/user/:username").handler(this::userHandler);
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
 		server.requestHandler(router).listen(8092, asyncResult -> {
 		if (asyncResult.succeeded()) {
@@ -55,6 +56,17 @@ public class MainVerticle extends AbstractVerticle
 		return future;
 	}
 
+	private void userHandler(RoutingContext context) {
+		String login = context.request().getHeader("username");
+		System.out.println(login);
+		JsonObject query = new JsonObject().put(("username"), login);
+//		mongoClient.find("users", query, result -> {
+//			if (result.succeeded()) {
+//				
+//			}
+//		});
+		
+	}
 	private void indexHandler(RoutingContext context) {
 		context.put("title", "Log in");
 		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
@@ -84,7 +96,7 @@ public class MainVerticle extends AbstractVerticle
 					System.out.println("Singing in");
 				    JsonObject json = result.result().get(0);
 				    errorMessage = "";
-					context.response().putHeader("Location", "/" + json.getString("username"));
+					context.response().putHeader("Location", "/user/" + json.getString("username"));
 					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
 					context.response().end();
 					return;
@@ -120,10 +132,8 @@ public class MainVerticle extends AbstractVerticle
 				errorMessage = "";
 				if (result.result().isEmpty()) {
 					query.put("password", password);
-					System.out.println(query.toString());
 					mongoClient.save("users", query, res -> {
 						if(res.succeeded()) {
-							System.out.println("Saved user");
 							context.response().putHeader("Location", "/" + login);
 							context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
 							context.response().end();
