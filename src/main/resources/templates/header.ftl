@@ -8,7 +8,7 @@
         rel="stylesheet"
         integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
         crossorigin="anonymous">
-  <title>${title} | Betacom</title>
+  <title> ${title} | Betacom</title>
 </head>
 <body>
 

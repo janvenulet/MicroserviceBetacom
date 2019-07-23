@@ -29,11 +29,12 @@
     </form>
   </div>
 
+<#if list != -1 > 
   <div class="col-md-12 mt-1">
   <#list items>
     <h2>Inventory:</h2>
     <ul>
-      <#items as page>
+      <#items as name>
         <li>${name}</li>
       </#items>
     </ul>
@@ -41,7 +42,9 @@
     <p>You don't have any items in your inventor.</p>
   </#list>
   </div>
-
+  <#else> 
+	<p>You don't have any items in your inventor.</p>
+  </#if>
 </div>
 
 <#include "footer.ftl">

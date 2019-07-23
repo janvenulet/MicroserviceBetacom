@@ -1,5 +1,10 @@
 package com.venul.betacom.microservice;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.bson.types.ObjectId;
+
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -57,14 +62,48 @@ public class MainVerticle extends AbstractVerticle
 	}
 
 	private void userHandler(RoutingContext context) {
-		String login = context.request().getHeader("username");
-		System.out.println(login);
+		String login = context.request().getParam("username");
 		JsonObject query = new JsonObject().put(("username"), login);
-//		mongoClient.find("users", query, result -> {
-//			if (result.succeeded()) {
-//				
-//			}
-//		});
+		mongoClient.find("users", query, result -> {
+			if (result.succeeded()) {
+				context.put("title", login);
+				System.out.println(login);
+				String id;
+				if (!(result.result().get(0).getValue("_id") instanceof String)) 
+					id = result.result().get(0).getString("_id").toString(); //here it fails for some reason
+				else
+					id = result.result().get(0).getString("_id");
+				mongoClient.find("items", new JsonObject().put("owner", id), resultHandler -> {
+					if (resultHandler.succeeded()) {
+						if (!result.result().isEmpty()) {
+							System.out.println(resultHandler.result().toString());
+							ArrayList<String> items = new ArrayList<String>();
+							for (JsonObject jsonObject : resultHandler.result()) {
+								items.add(jsonObject.getString("name"));
+							}
+							System.out.println(items.toString());
+							context.put("items", items.toString());
+						} else {
+							System.out.println("empty");
+							context.put("items", "-1"); //no items assigned to particular account
+						}
+					} else {
+						context.fail(resultHandler.cause());
+					}
+				});
+			} else {
+				context.fail(result.cause());
+			}
+            templateEngine.render(context.data(), "templates/page.ftl", ar -> {   // <3>
+                if (ar.succeeded()) {
+                  context.response().putHeader("Content-Type", "text/html");
+                  context.response().end(ar.result());  // <4>
+                } else {
+                  context.fail(ar.cause());
+                }
+              });
+			
+		});
 		
 	}
 	private void indexHandler(RoutingContext context) {
