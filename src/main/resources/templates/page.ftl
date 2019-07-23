@@ -15,36 +15,10 @@
     </h1>
   </div>
 
-  <div class="col-md-12 collapsable collapse clearfix" id="editor">
-    <form action="/save" method="post">
-      <div class="form-group">
-        <input type="hidden" name="id" value="${id}">
-        <input type="text" name="title" value="${title}">
-        <input type="hidden" name="newPage" value="${newPage}">
-      </div>
-      <button type="submit" class="btn btn-primary">Save</button>
-    <#if id != -1>
-      <button type="submit" formaction="/delete" class="btn btn-danger float-right">Delete</button>
-    </#if>
-    </form>
-  </div>
 
-<#if list != -1 > 
-  <div class="col-md-12 mt-1">
-  <#list items>
-    <h2>Inventory:</h2>
-    <ul>
-      <#items as name>
-        <li>${name}</li>
-      </#items>
-    </ul>
-  <#else>
-    <p>You don't have any items in your inventor.</p>
-  </#list>
-  </div>
-  <#else> 
-	<p>You don't have any items in your inventor.</p>
-  </#if>
+<#if items = "empty" > 
+<h1>You don't have any items in your inventor.</h1>
+</#if>
 </div>
 
 <#include "footer.ftl">

@@ -75,7 +75,7 @@ public class MainVerticle extends AbstractVerticle
 					id = result.result().get(0).getString("_id");
 				mongoClient.find("items", new JsonObject().put("owner", id), resultHandler -> {
 					if (resultHandler.succeeded()) {
-						if (!result.result().isEmpty()) {
+						if (!resultHandler.result().isEmpty()) {
 							System.out.println(resultHandler.result().toString());
 							ArrayList<String> items = new ArrayList<String>();
 							for (JsonObject jsonObject : resultHandler.result()) {
@@ -85,7 +85,7 @@ public class MainVerticle extends AbstractVerticle
 							context.put("items", items.toString());
 						} else {
 							System.out.println("empty");
-							context.put("items", "-1"); //no items assigned to particular account
+							context.put("items", "empty"); //no items assigned to particular account
 						}
 					} else {
 						context.fail(resultHandler.cause());
