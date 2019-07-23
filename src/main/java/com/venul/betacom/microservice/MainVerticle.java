@@ -85,7 +85,7 @@ public class MainVerticle extends AbstractVerticle
 							context.put("items", items.toString());
 						} else {
 							System.out.println("empty");
-							context.put("items", "empty"); //no items assigned to particular account
+							context.put("items2", "empty"); //no items assigned to particular account
 						}
 					} else {
 						context.fail(resultHandler.cause());
@@ -96,6 +96,7 @@ public class MainVerticle extends AbstractVerticle
 			}
             templateEngine.render(context.data(), "templates/page.ftl", ar -> {   // <3>
                 if (ar.succeeded()) {
+                //context.put("items2", "empty"); 
                   context.response().putHeader("Content-Type", "text/html");
                   context.response().end(ar.result());  // <4>
                 } else {

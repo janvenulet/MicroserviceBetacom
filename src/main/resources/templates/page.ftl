@@ -16,8 +16,8 @@
   </div>
 
 
-<#if items = "empty" > 
-<h1>You don't have any items in your inventor.</h1>
+<#if items2 == "empty" > 
+	sadf
 </#if>
 </div>
 
