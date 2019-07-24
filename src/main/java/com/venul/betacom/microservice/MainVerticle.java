@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.bson.types.ObjectId;
-
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -14,7 +12,6 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-//import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -41,26 +38,25 @@ public class MainVerticle extends AbstractVerticle
 	private Future<Void> setupHttpServer() {
 		Future <Void> future = Future.future();
 		HttpServer server = vertx.createHttpServer();
-		
 		Router router = Router.router(vertx);
 		
 		router.get("/").handler(this::indexHandler); //error possibility
 		router.get("/signup").handler(this::signupHandler);
+		router.get("/user/:username").handler(this::userHandler);
 		router.post().handler(BodyHandler.create());
 		router.post("/register").handler(this::registerHandler);
 		router.post("/login").handler(this::loginHandler);
 		router.post("/delete").handler(this::deleteItemHandler);
 		router.post("/save").handler(this::addItemHandler);
-		router.get("/user/:username").handler(this::userHandler);
-		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
+		templateEngine = FreeMarkerTemplateEngine.create(vertx);
 		server.requestHandler(router).listen(8092, asyncResult -> {
-		if (asyncResult.succeeded()) {
-			System.out.print("HTTP server running on port 8092");
-			future.complete();
-		} else {
-			System.out.print("Could not start a HTTP server\n" + asyncResult.cause().toString());
-			future.fail(asyncResult.cause());
-		}
+			if (asyncResult.succeeded()) {
+				System.out.print("HTTP server running on port 8092");
+				future.complete();
+			} else {
+				System.out.print("Could not start a HTTP server\n" + asyncResult.cause().toString());
+				future.fail(asyncResult.cause());
+			}
 		});
 		return future;
 	}
@@ -136,6 +132,7 @@ public class MainVerticle extends AbstractVerticle
 			}
 		});
 	}
+	
 	private void addItemHandler(RoutingContext context) {
 	    String owner = context.request().getParam("owner");   // <1>
 	    String name = context.request().getParam("name");
