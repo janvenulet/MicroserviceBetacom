@@ -2,6 +2,8 @@ package com.venul.betacom.microservice;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.bson.types.ObjectId;
 
@@ -74,18 +76,18 @@ public class MainVerticle extends AbstractVerticle
 				else
 					id = result.result().get(0).getString("_id");
 				mongoClient.find("items", new JsonObject().put("owner", id), resultHandler -> {
+					ArrayList<String> items = new ArrayList<String>();
 					if (resultHandler.succeeded()) {
 						if (!resultHandler.result().isEmpty()) {
+							List<String> pages = resultHandler.result().stream().map(json -> json.getString("name")).sorted().collect(Collectors.toList());
 							System.out.println(resultHandler.result().toString());
-							ArrayList<String> items = new ArrayList<String>();
-							for (JsonObject jsonObject : resultHandler.result()) {
-								items.add(jsonObject.getString("name"));
-							}
-							System.out.println(items.toString());
-							context.put("items", items.toString());
+							context.put("items", pages); 
+							websiteRender(context, "templates/page.ftl");
 						} else {
+							context.put("items", items); //no items assigned to particular account	
+							websiteRender(context, "templates/page.ftl");
+							System.out.println(items.toString());
 							System.out.println("empty");
-							context.put("items2", "empty"); //no items assigned to particular account
 						}
 					} else {
 						context.fail(resultHandler.cause());
@@ -94,19 +96,23 @@ public class MainVerticle extends AbstractVerticle
 			} else {
 				context.fail(result.cause());
 			}
-            templateEngine.render(context.data(), "templates/page.ftl", ar -> {   // <3>
-                if (ar.succeeded()) {
-                //context.put("items2", "empty"); 
-                  context.response().putHeader("Content-Type", "text/html");
-                  context.response().end(ar.result());  // <4>
-                } else {
-                  context.fail(ar.cause());
-                }
-              });
 			
 		});
 		
 	}
+	
+	
+	private void websiteRender(RoutingContext context, String filename) {
+        templateEngine.render(context.data(), filename, ar -> {   // <3>
+            if (ar.succeeded()) {
+              context.response().putHeader("Content-Type", "text/html");
+              context.response().end(ar.result());  // <4>
+            } else {
+              context.fail(ar.cause());
+            }
+          });
+		}
+	
 	private void indexHandler(RoutingContext context) {
 		context.put("title", "Log in");
 		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
