@@ -202,7 +202,6 @@ public class MainVerticle extends AbstractVerticle
 			} else {
 				result.cause().printStackTrace();
 			}
-			
 		});
 	}
 	
