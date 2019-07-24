@@ -49,6 +49,7 @@ public class MainVerticle extends AbstractVerticle
 		router.post().handler(BodyHandler.create());
 		router.post("/register").handler(this::registerHandler);
 		router.post("/login").handler(this::loginHandler);
+		router.post("/save").handler(this::addItemHandler);
 		router.get("/user/:username").handler(this::userHandler);
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
 		server.requestHandler(router).listen(8092, asyncResult -> {
@@ -68,26 +69,23 @@ public class MainVerticle extends AbstractVerticle
 		JsonObject query = new JsonObject().put(("username"), login);
 		mongoClient.find("users", query, result -> {
 			if (result.succeeded()) {
-				context.put("title", login);
-				System.out.println(login);
+				context.put("title", "My Account");
+				context.put("user", login);
 				String id;
 				if (!(result.result().get(0).getValue("_id") instanceof String)) 
 					id = result.result().get(0).getString("_id").toString(); //here it fails for some reason
 				else
 					id = result.result().get(0).getString("_id");
 				mongoClient.find("items", new JsonObject().put("owner", id), resultHandler -> {
-					ArrayList<String> items = new ArrayList<String>();
+					List<String> items = new ArrayList<String>();
 					if (resultHandler.succeeded()) {
 						if (!resultHandler.result().isEmpty()) {
-							List<String> pages = resultHandler.result().stream().map(json -> json.getString("name")).sorted().collect(Collectors.toList());
-							System.out.println(resultHandler.result().toString());
-							context.put("items", pages); 
+							items = resultHandler.result().stream().map(json -> json.getString("name")).sorted().collect(Collectors.toList());
+							context.put("items", items); 
 							websiteRender(context, "templates/page.ftl");
 						} else {
 							context.put("items", items); //no items assigned to particular account	
 							websiteRender(context, "templates/page.ftl");
-							System.out.println(items.toString());
-							System.out.println("empty");
 						}
 					} else {
 						context.fail(resultHandler.cause());
@@ -96,9 +94,7 @@ public class MainVerticle extends AbstractVerticle
 			} else {
 				context.fail(result.cause());
 			}
-			
 		});
-		
 	}
 	
 	
@@ -112,18 +108,35 @@ public class MainVerticle extends AbstractVerticle
             }
           });
 		}
-	
+	private void addItemHandler(RoutingContext context) {
+	    String owner = context.request().getParam("owner");   // <1>
+	    String name = context.request().getParam("name");
+	    JsonObject query = new JsonObject().put(("username"), owner);
+		mongoClient.find("users", query, result -> {
+			if (result.succeeded()) {
+				String id;
+				if (!(result.result().get(0).getValue("_id") instanceof String)) 
+					id = result.result().get(0).getString("_id").toString(); //here it fails for some reason
+				else
+					id = result.result().get(0).getString("_id");
+	    JsonObject query2 = new JsonObject().put("owner", id).put("name", name);
+	    mongoClient.save("items", query2, resultHandler -> {
+	    	if(resultHandler.succeeded()) {
+				context.response().putHeader("Location", "/user/" + owner);
+				context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+				context.response().end();
+	    	} else {
+	    		 context.fail(resultHandler.cause());
+	    	}
+	    });
+		}
+		});
+	    
+	}
 	private void indexHandler(RoutingContext context) {
 		context.put("title", "Log in");
 		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
-		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
-			if (asyncResult.succeeded()) {
-				context.response().putHeader("Content-Type", "text/html");
-				context.response().end(asyncResult.result());
-			} else {
-				context.fail(asyncResult.cause());
-			}
-		});
+		websiteRender(context, "templates/index.ftl");
 	}
 	
 	
@@ -158,14 +171,7 @@ public class MainVerticle extends AbstractVerticle
 		context.put("title", "Sign up");
 		if (errorMessage.equals("Wrong login or password! Please try again.")) errorMessage = "";
 		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
-		templateEngine.render(context.data(), "templates/index.ftl" , asyncResult -> {
-			if (asyncResult.succeeded()) {
-				context.response().putHeader("Content-Type", "text/html");
-				context.response().end(asyncResult.result());
-			} else {
-				context.fail(asyncResult.cause());
-			}
-		});
+		websiteRender(context, "templates/index.ftl");
 	}
 
 	private void registerHandler(RoutingContext context) {
