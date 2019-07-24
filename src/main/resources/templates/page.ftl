@@ -20,7 +20,15 @@
   <#list items>
     <ul>
       <#items as name>
-        <li>${name}</li>
+        <li>${name} 
+        	<form action="/delete" method="post">
+		        <div class="form-group">
+			        <input type="hidden" name="owner" value="${user}">
+			        <input type="hidden" name="name" value="${name}">
+		      	</div>
+        		<button type="submit" class="btn btn-danger btn-sm">Delete item</button>
+      		</form>
+      	</li> 
       </#items>
     </ul>
   <#else>

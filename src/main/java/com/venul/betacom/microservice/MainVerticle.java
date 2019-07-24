@@ -49,6 +49,7 @@ public class MainVerticle extends AbstractVerticle
 		router.post().handler(BodyHandler.create());
 		router.post("/register").handler(this::registerHandler);
 		router.post("/login").handler(this::loginHandler);
+		router.post("/delete").handler(this::deleteItemHandler);
 		router.post("/save").handler(this::addItemHandler);
 		router.get("/user/:username").handler(this::userHandler);
 		templateEngine = FreeMarkerTemplateEngine.create(vertx); //??? 
@@ -108,6 +109,33 @@ public class MainVerticle extends AbstractVerticle
             }
           });
 		}
+	
+	private void deleteItemHandler( RoutingContext context) {
+		String owner = context.request().getParam("owner");   // <1>
+	    String name = context.request().getParam("name");
+	    JsonObject query = new JsonObject().put(("username"), owner);
+		mongoClient.find("users", query, result -> {
+			if (result.succeeded()) {
+				String id;
+				if (!(result.result().get(0).getValue("_id") instanceof String)) 
+					id = result.result().get(0).getString("_id").toString(); //here it fails for some reason
+				else
+					id = result.result().get(0).getString("_id");
+			    JsonObject query2 = new JsonObject().put("owner", id).put("name", name);
+			    mongoClient.removeDocument("items", query2, resultHandler -> {
+			    	if(resultHandler.succeeded()) {
+						context.response().putHeader("Location", "/user/" + owner);
+						context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+						context.response().end();
+			    	} else {
+			    		 context.fail(resultHandler.cause());
+			    	}
+			    });
+			} else {
+				 context.fail(result.cause());
+			}
+		});
+	}
 	private void addItemHandler(RoutingContext context) {
 	    String owner = context.request().getParam("owner");   // <1>
 	    String name = context.request().getParam("name");
@@ -119,20 +147,22 @@ public class MainVerticle extends AbstractVerticle
 					id = result.result().get(0).getString("_id").toString(); //here it fails for some reason
 				else
 					id = result.result().get(0).getString("_id");
-	    JsonObject query2 = new JsonObject().put("owner", id).put("name", name);
-	    mongoClient.save("items", query2, resultHandler -> {
-	    	if(resultHandler.succeeded()) {
-				context.response().putHeader("Location", "/user/" + owner);
-				context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
-				context.response().end();
-	    	} else {
-	    		 context.fail(resultHandler.cause());
-	    	}
-	    });
-		}
+			    JsonObject query2 = new JsonObject().put("owner", id).put("name", name);
+			    mongoClient.save("items", query2, resultHandler -> {
+			    	if(resultHandler.succeeded()) {
+						context.response().putHeader("Location", "/user/" + owner);
+						context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+						context.response().end();
+			    	} else {
+			    		 context.fail(resultHandler.cause());
+			    	}
+			    });
+			} else {
+				context.fail(result.cause());
+			}
 		});
-	    
 	}
+	
 	private void indexHandler(RoutingContext context) {
 		context.put("title", "Log in");
 		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
