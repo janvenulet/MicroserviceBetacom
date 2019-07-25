@@ -11,6 +11,10 @@ import io.vertx.core.Handler;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.AuthProvider;
+import io.vertx.ext.auth.KeyStoreOptions;
+import io.vertx.ext.auth.jwt.JWTAuth;
+import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -21,11 +25,12 @@ public class MainVerticle extends AbstractVerticle
 {
 	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
+	private AuthProvider provider;
 	private String errorMessage = "";
 	
 	@Override
 	public void start(Future<Void> startFuture) throws Exception {
-		Future<Void> future = setupDatabase().compose(v -> setupHttpServer());
+		Future<Void> future = setupDatabase().compose(v -> setupHttpServer()).compose(v -> setupAuth());
 		future.setHandler(asyncResult -> {
 			if(asyncResult.succeeded()) {
 				startFuture.complete();
@@ -58,6 +63,25 @@ public class MainVerticle extends AbstractVerticle
 				future.fail(asyncResult.cause());
 			}
 		});
+		return future;
+	}
+	
+	private Future<Void> setupDatabase() {
+		config().remove("db_name");
+		mongoClient = MongoClient.createShared(vertx, config().put("db_name","microservices")); //creates pool on the first call
+		Future<Void> future = Future.future();
+		future.complete();
+		return future;
+	}
+	
+	
+	private Future<Void> setupAuth(){
+		JWTAuthOptions config = new JWTAuthOptions().setKeyStore( new KeyStoreOptions().setPath("keystore.jceks")
+			    .setPassword("secret"));
+		
+		provider = JWTAuth.create(vertx, config);
+		Future<Void> future = Future.future();
+		future.complete();
 		return future;
 	}
 
@@ -96,10 +120,10 @@ public class MainVerticle extends AbstractVerticle
 	
 	
 	private void websiteRender(RoutingContext context, String filename) {
-        templateEngine.render(context.data(), filename, ar -> {   // <3>
+        templateEngine.render(context.data(), filename, ar -> {
             if (ar.succeeded()) {
               context.response().putHeader("Content-Type", "text/html");
-              context.response().end(ar.result());  // <4>
+              context.response().end(ar.result());
             } else {
               context.fail(ar.cause());
             }
@@ -107,7 +131,7 @@ public class MainVerticle extends AbstractVerticle
 		}
 	
 	private void deleteItemHandler( RoutingContext context) {
-		String owner = context.request().getParam("owner");   // <1>
+		String owner = context.request().getParam("owner");
 	    String name = context.request().getParam("name");
 	    JsonObject query = new JsonObject().put(("username"), owner);
 		mongoClient.find("users", query, result -> {
@@ -134,7 +158,7 @@ public class MainVerticle extends AbstractVerticle
 	}
 	
 	private void addItemHandler(RoutingContext context) {
-	    String owner = context.request().getParam("owner");   // <1>
+	    String owner = context.request().getParam("owner"); 
 	    String name = context.request().getParam("name");
 	    JsonObject query = new JsonObject().put(("username"), owner);
 		mongoClient.find("users", query, result -> {
@@ -231,13 +255,5 @@ public class MainVerticle extends AbstractVerticle
 			}
 		});
 	}
-	
-	private Future<Void> setupDatabase() {
-		config().remove("db_name");
-		mongoClient = MongoClient.createShared(vertx, config().put("db_name","microservices")); //creates pool on the first call
-		Future<Void> future = Future.future();
-		future.complete();
-		return future;
-	}
-	
+ 
 }
