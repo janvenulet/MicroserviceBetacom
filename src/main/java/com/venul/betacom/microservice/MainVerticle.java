@@ -13,6 +13,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.KeyStoreOptions;
+import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.mongo.MongoClient;
@@ -76,9 +77,11 @@ public class MainVerticle extends AbstractVerticle
 	
 	
 	private Future<Void> setupAuth(){
-		JWTAuthOptions config = new JWTAuthOptions().setKeyStore( new KeyStoreOptions().setPath("keystore.jceks")
-			    .setPassword("secret"));
-		
+		JWTAuthOptions config = new JWTAuthOptions()
+				.addPubSecKey(new PubSecKeyOptions()
+						.setAlgorithm("HS256")
+						.setPublicKey("keyboard cat")
+						.setSymmetric(true));	
 		provider = JWTAuth.create(vertx, config);
 		Future<Void> future = Future.future();
 		future.complete();
