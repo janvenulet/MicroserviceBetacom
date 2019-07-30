@@ -122,7 +122,7 @@ public class MainVerticle extends AbstractVerticle
 //						  	context.response().putHeader("Pragma", "no-cache"); //required by rfc6749 OAuth2.0 Protocol
 							context.response().putHeader("Location", "/user/" + json.getString("username") + "#access_token=" + token);
 							context.response().setStatusCode(301);
-							context.response().putHeader("token", "Bearer " + token);
+//							context.response().putHeader("token", "Bearer " + token);
 //							context.response().putHeader("Content-Length", Integer.toString(body.toString().length()));
 //							System.out.println(body.toString());
 //							context.response().write(body.toString()); //Redirection http response(3xx) - 301 moved permanently
