@@ -8,6 +8,7 @@ import org.bson.types.ObjectId;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
@@ -30,7 +31,12 @@ public class MainVerticle extends AbstractVerticle
 	private FreeMarkerTemplateEngine templateEngine;
 	static private JWTAuth provider;
 	private User user;
+	private String token; 
 	private String errorMessage = "";
+	private String accessTokenResponseContent = "\"token_type\":\"jwt\",";
+			//+ "\"expires_in\":3600,"
+		    //+ "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\","
+		    //+ "\"example_parameter\":\"example_value\"";
 	
 	@Override
 	public void start(Future<Void> startFuture) throws Exception {
@@ -85,7 +91,6 @@ public class MainVerticle extends AbstractVerticle
 						.setPublicKey("keyboard cat")
 						.setSymmetric(true));	
 		provider = JWTAuth.create(vertx, config);
-		System.out.println("\nOGÓR" + provider.toString() + "\nkartofel");
 		Future<Void> future = Future.future();
 		future.complete();
 		return future;
@@ -109,18 +114,24 @@ public class MainVerticle extends AbstractVerticle
 					System.out.println(token);
 					provider.authenticate(new JsonObject().put("jwt", token), resultHandler -> {
 						if (resultHandler.succeeded()) {
-							//JWTAuth jwt = JWTAuth.create(context.vertx(), new JsonObject());
-						  	context.setUser(resultHandler.result());
-						  	context.session().put("token", token);
-							context.response().putHeader("Location", "/user/" + json.getString("username"));
-							context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+							user = resultHandler.result();
+							JsonObject body = new JsonObject().put("access_token", token).put("token_type", "Bearer");
+						  	context.setUser(user);
+//						  	context.response().putHeader("Content-Type", "application/json;charset=UTF-8");
+//						  	context.response().putHeader("Cache-Control", "no-store"); //required by rfc6749 OAuth2.0 Protocol
+//						  	context.response().putHeader("Pragma", "no-cache"); //required by rfc6749 OAuth2.0 Protocol
+							context.response().putHeader("Location", "/user/" + json.getString("username") + "#access_token=" + token);
+							context.response().setStatusCode(301);
+							context.response().putHeader("token", "Bearer " + token);
+//							context.response().putHeader("Content-Length", Integer.toString(body.toString().length()));
+//							System.out.println(body.toString());
+//							context.response().write(body.toString()); //Redirection http response(3xx) - 301 moved permanently
 							context.response().end();
 						} else {
 							  resultHandler.cause().printStackTrace();
 						}
 					});
 				}
-
 			} else {
 				result.cause().printStackTrace();
 			}
@@ -200,6 +211,7 @@ public class MainVerticle extends AbstractVerticle
 	}
 	
 	private void addItemHandler(RoutingContext context) {
+		System.out.println(context.request().getHeader("access_token"));
 	    String owner = context.request().getParam("owner"); 
 	    String name = context.request().getParam("name");
 	    JsonObject query = new JsonObject().put(("username"), owner);
@@ -235,6 +247,7 @@ public class MainVerticle extends AbstractVerticle
 
 
 	private void signupHandler(RoutingContext context) {
+		user = null;	
 		context.put("title", "Sign up");
 		if (errorMessage.equals("Wrong login or password! Please try again.")) errorMessage = "";
 		context.put("errorMessage", errorMessage); //sets "Wrong login or password! Please try again" above input form
