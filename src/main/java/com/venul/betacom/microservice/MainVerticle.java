@@ -14,8 +14,10 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.KeyStoreOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
+import io.vertx.ext.jwt.JWTOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -26,7 +28,8 @@ public class MainVerticle extends AbstractVerticle
 {
 	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
-	private AuthProvider provider;
+	static private JWTAuth provider;
+	private User user;
 	private String errorMessage = "";
 	
 	@Override
@@ -45,7 +48,6 @@ public class MainVerticle extends AbstractVerticle
 		Future <Void> future = Future.future();
 		HttpServer server = vertx.createHttpServer();
 		Router router = Router.router(vertx);
-		
 		router.get("/").handler(this::indexHandler); //error possibility
 		router.get("/signup").handler(this::signupHandler);
 		router.get("/user/:username").handler(this::userHandler);
@@ -83,11 +85,48 @@ public class MainVerticle extends AbstractVerticle
 						.setPublicKey("keyboard cat")
 						.setSymmetric(true));	
 		provider = JWTAuth.create(vertx, config);
+		System.out.println("\nOGÓR" + provider.toString() + "\nkartofel");
 		Future<Void> future = Future.future();
 		future.complete();
 		return future;
 	}
 
+	private void loginHandler(RoutingContext context) {
+		String login = context.request().getParam("loginId");
+		String password = context.request().getParam("passwordId");
+		JsonObject query = new JsonObject().put(("username"), login).put("password", password);
+		mongoClient.find("users", query, result -> {
+			if(result.succeeded()) {
+				if (result.result().isEmpty()) {
+					errorMessage = "Wrong login or password! Please try again.";
+					context.response().putHeader("Location", "/");
+					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+					context.response().end();
+				} else {
+				    JsonObject json = result.result().get(0);
+				    errorMessage = "";
+					String token = provider.generateToken(new JsonObject().put("sub", login), new JWTOptions());
+					System.out.println(token);
+					provider.authenticate(new JsonObject().put("jwt", token), resultHandler -> {
+						if (resultHandler.succeeded()) {
+							//JWTAuth jwt = JWTAuth.create(context.vertx(), new JsonObject());
+						  	context.setUser(resultHandler.result());
+						  	context.session().put("token", token);
+							context.response().putHeader("Location", "/user/" + json.getString("username"));
+							context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+							context.response().end();
+						} else {
+							  resultHandler.cause().printStackTrace();
+						}
+					});
+				}
+
+			} else {
+				result.cause().printStackTrace();
+			}
+		});
+	}
+	
 	private void userHandler(RoutingContext context) {
 		String login = context.request().getParam("username");
 		JsonObject query = new JsonObject().put(("username"), login);
@@ -133,7 +172,7 @@ public class MainVerticle extends AbstractVerticle
           });
 		}
 	
-	private void deleteItemHandler( RoutingContext context) {
+	private void deleteItemHandler(RoutingContext context) {
 		String owner = context.request().getParam("owner");
 	    String name = context.request().getParam("name");
 	    JsonObject query = new JsonObject().put(("username"), owner);
@@ -193,33 +232,7 @@ public class MainVerticle extends AbstractVerticle
 		websiteRender(context, "templates/index.ftl");
 	}
 	
-	
-	private void loginHandler(RoutingContext context) {
-		String login = context.request().getParam("loginId");
-		String password = context.request().getParam("passwordId");
-		JsonObject query = new JsonObject().put(("username"), login).put("password", password);
-		mongoClient.find("users", query, result -> {
-			if(result.succeeded()) {
-				if (result.result().isEmpty()) {
-					errorMessage = "Wrong login or password! Please try again.";
-					context.response().putHeader("Location", "/");
-					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
-					context.response().end();
-				} else {
-					System.out.println("Singing in");
-				    JsonObject json = result.result().get(0);
-				    errorMessage = "";
-					context.response().putHeader("Location", "/user/" + json.getString("username"));
-					context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
-					context.response().end();
-					return;
-				}
 
-			} else {
-				result.cause().printStackTrace();
-			}
-		});
-	}
 
 	private void signupHandler(RoutingContext context) {
 		context.put("title", "Sign up");
