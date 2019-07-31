@@ -29,7 +29,6 @@ public class MainVerticle extends AbstractVerticle
 {
 	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
-	static private JWTAuth provider;
 	private User user;
 	private String token; 
 	private String errorMessage = "";
@@ -40,7 +39,7 @@ public class MainVerticle extends AbstractVerticle
 	
 	@Override
 	public void start(Future<Void> startFuture) throws Exception {
-		Future<Void> future = setupDatabase().compose(v -> setupHttpServer()).compose(v -> setupAuth());
+		Future<Void> future = setupDatabase().compose(v -> setupHttpServer());
 		future.setHandler(asyncResult -> {
 			if(asyncResult.succeeded()) {
 				startFuture.complete();
@@ -83,19 +82,6 @@ public class MainVerticle extends AbstractVerticle
 		return future;
 	}
 	
-	
-	private Future<Void> setupAuth(){
-		JWTAuthOptions config = new JWTAuthOptions()
-				.addPubSecKey(new PubSecKeyOptions()
-						.setAlgorithm("HS256")
-						.setPublicKey("keyboard cat")
-						.setSymmetric(true));	
-		provider = JWTAuth.create(vertx, config);
-		Future<Void> future = Future.future();
-		future.complete();
-		return future;
-	}
-
 	private void loginHandler(RoutingContext context) {
 		String login = context.request().getParam("loginId");
 		String password = context.request().getParam("passwordId");
