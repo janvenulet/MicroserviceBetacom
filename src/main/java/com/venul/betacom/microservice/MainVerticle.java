@@ -29,6 +29,7 @@ public class MainVerticle extends AbstractVerticle
 {
 	private MongoClient mongoClient;
 	private FreeMarkerTemplateEngine templateEngine;
+	static private JWTAuth provider;
 	private User user;
 	private String token; 
 	private String errorMessage = "";
@@ -39,7 +40,7 @@ public class MainVerticle extends AbstractVerticle
 	
 	@Override
 	public void start(Future<Void> startFuture) throws Exception {
-		Future<Void> future = setupDatabase().compose(v -> setupHttpServer());
+		Future<Void> future = setupDatabase().compose(v -> setupHttpServer()).compose(v -> setupAuth());
 		future.setHandler(asyncResult -> {
 			if(asyncResult.succeeded()) {
 				startFuture.complete();
@@ -55,6 +56,7 @@ public class MainVerticle extends AbstractVerticle
 		Router router = Router.router(vertx);
 		router.get("/").handler(this::indexHandler); //error possibility
 		router.get("/signup").handler(this::signupHandler);
+		router.get("/logout").handler(this::logoutHandler);
 		router.get("/user/:username").handler(this::userHandler);
 		router.post().handler(BodyHandler.create());
 		router.post("/register").handler(this::registerHandler);
@@ -82,6 +84,19 @@ public class MainVerticle extends AbstractVerticle
 		return future;
 	}
 	
+	
+	private Future<Void> setupAuth(){
+		JWTAuthOptions config = new JWTAuthOptions()
+				.addPubSecKey(new PubSecKeyOptions()
+						.setAlgorithm("HS256")
+						.setPublicKey("keyboard cat")
+						.setSymmetric(true));	
+		provider = JWTAuth.create(vertx, config);
+		Future<Void> future = Future.future();
+		future.complete();
+		return future;
+	}
+
 	private void loginHandler(RoutingContext context) {
 		String login = context.request().getParam("loginId");
 		String password = context.request().getParam("passwordId");
@@ -101,13 +116,14 @@ public class MainVerticle extends AbstractVerticle
 					provider.authenticate(new JsonObject().put("jwt", token), resultHandler -> {
 						if (resultHandler.succeeded()) {
 							user = resultHandler.result();
-							JsonObject body = new JsonObject().put("access_token", token).put("token_type", "Bearer");
-						  	context.setUser(user);
+//							JsonObject body = new JsonObject().put("access_token", token).put("token_type", "Bearer");
+							context.response().putHeader("Location", "/user/" + json.getString("username"));
+							context.response().setStatusCode(301);
+//						  	context.setUser(user);
 //						  	context.response().putHeader("Content-Type", "application/json;charset=UTF-8");
 //						  	context.response().putHeader("Cache-Control", "no-store"); //required by rfc6749 OAuth2.0 Protocol
 //						  	context.response().putHeader("Pragma", "no-cache"); //required by rfc6749 OAuth2.0 Protocol
-							context.response().putHeader("Location", "/user/" + json.getString("username") + "#access_token=" + token);
-							context.response().setStatusCode(301);
+//							context.response().putHeader("WWW-Authenticate", "Bearer realm=\"Access to user data\"");
 //							context.response().putHeader("token", "Bearer " + token);
 //							context.response().putHeader("Content-Length", Integer.toString(body.toString().length()));
 //							System.out.println(body.toString());
@@ -197,7 +213,6 @@ public class MainVerticle extends AbstractVerticle
 	}
 	
 	private void addItemHandler(RoutingContext context) {
-		System.out.println(context.request().getHeader("access_token"));
 	    String owner = context.request().getParam("owner"); 
 	    String name = context.request().getParam("name");
 	    JsonObject query = new JsonObject().put(("username"), owner);
@@ -230,7 +245,12 @@ public class MainVerticle extends AbstractVerticle
 		websiteRender(context, "templates/index.ftl");
 	}
 	
-
+	private void logoutHandler(RoutingContext context) {
+		user = null;
+		context.response().putHeader("Location", "/");
+		context.response().setStatusCode(301); //Redirection http response(3xx) - 301 moved permanently
+		context.response().end();
+	}
 
 	private void signupHandler(RoutingContext context) {
 		user = null;	

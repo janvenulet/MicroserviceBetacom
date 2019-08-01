@@ -6,7 +6,7 @@
       <span class="float-right">
         <button class="btn btn-outline-warning" type="button" data-toggle="collapse"
                 data-target="#editor" aria-expanded="false" aria-controls="editor">Add item</button>
-        <a class="btn btn-outline-primary" href="/" role="button" aria-pressed="true">Log out</a>
+        <a class="btn btn-outline-primary" href="/logout" role="button" aria-pressed="true">Log out</a>
       </span>
     <h1 class="display-4">
       <span class="text-muted">Welcome back </span>
